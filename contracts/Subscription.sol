@@ -6,6 +6,11 @@ contract TollSubscription {
     string serviceName;
     address owner;
 
+    modifier onlyOwner() {
+        require(msg.sender == owner, "TollSubscription: Sender is not owner.");
+        _;
+    }
+
     struct Subscription {
         bool exists;
         address subscriber;
@@ -20,8 +25,8 @@ contract TollSubscription {
         owner = _owner;
     }
 
-    function subscribe(uint _maxAmount) public {
-        subscribers[msg.sender] = Subscription({exists: true, subscriber: msg.sender, expires: block.timestamp + 2 weeks, maxAmount: _maxAmount});
+    function subscribe(address _subscriber, uint _maxAmount) public onlyOwner {
+        subscribers[_subscriber] = Subscription({exists: true, subscriber: _subscriber, expires: block.timestamp + 2 weeks, maxAmount: _maxAmount});
     }
 
     function chargeAmount(uint _numTokens, address _multiSigAddress, address _erc20Address) external {

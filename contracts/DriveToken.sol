@@ -17,11 +17,11 @@ contract DriveToken is ERC20 {
     }
 
     function assignTokens(address _accountAddress, uint256 _amount) public onlyOwner {
-        _mint(_accountAddress, (_amount * 10^decimals()));
+        _mint(_accountAddress, (_amount * ( 10 ** decimals())));
     }
 
     function transferTokens(address _accountAddress, uint256 _amount) public {
-        bool success = transfer(_accountAddress, (_amount * 10^decimals()));
+        bool success = transfer(_accountAddress, (_amount * ( 10 ** decimals())));
         require(success, "DriveToken: Token transfer failed.");
     }
 
