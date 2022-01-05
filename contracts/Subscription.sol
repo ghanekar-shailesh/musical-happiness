@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.10;
 
-contract TollSubscription {
+contract SubscriptionService {
 
     string serviceName;
     address owner;
+    uint numRequests;
 
-    modifier onlyOwner() {
-        require(msg.sender == owner, "TollSubscription: Sender is not owner.");
-        _;
-    }
+    mapping(address => Subscription) private subscribers;
+    mapping(address => mapping(uint256 => bool)) private requestStatus;
 
     struct Subscription {
         bool exists;
@@ -18,27 +17,47 @@ contract TollSubscription {
         uint maxAmount; 
     }
 
-    mapping(address => Subscription) public subscribers;
+    struct PaymentRequest {
+        address to;
+        bool complete;
+    }
 
-    constructor(address _owner, string memory _serviceName) {
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Subscription: Not the owner.");
+        _;
+    }
+
+    constructor(string memory _serviceName) {
         serviceName = _serviceName;
-        owner = _owner;
+        owner = msg.sender;
     }
 
-    function subscribe(address _subscriber, uint _maxAmount) public onlyOwner {
-        subscribers[_subscriber] = Subscription({exists: true, subscriber: _subscriber, expires: block.timestamp + 2 weeks, maxAmount: _maxAmount});
+    function subscribe(uint _maxAmount) public {
+        subscribers[msg.sender] = Subscription({exists: true, subscriber: msg.sender, expires: block.timestamp + 2 weeks, maxAmount: _maxAmount});
     }
 
-    function chargeAmount(uint _numTokens, address _multiSigAddress, address _erc20Address) external {
-        require(subscribers[_multiSigAddress].exists, "TollSubscription: Subscription does not exist.");
-        require(subscribers[_multiSigAddress].expires > block.timestamp, "TollSubscription: Subscription expired.");
-        require(subscribers[_multiSigAddress].maxAmount >= _numTokens, "TollSubscription: Amount threshold breached.");
-        bytes memory transferTxn = abi.encodeWithSignature("transfer(address,uint256)", address(this), _numTokens);
-        bytes memory multiSigSubmitTxn = abi.encodeWithSignature("submitTransaction(address,uint256,bytes)", _erc20Address, 0, transferTxn);
+    function chargeAmount(uint _numTokens, address _multiSigAddress, address _erc20Address) public onlyOwner {
+        require(subscribers[_multiSigAddress].exists, "Subscription: Subscription does not exist.");
+        require(subscribers[_multiSigAddress].expires > block.timestamp, "Subscription: Subscription expired.");
+        require(subscribers[_multiSigAddress].maxAmount >= _numTokens, "Subscription: Amount threshold breached.");
+        uint reqId = numRequests;
+        requestStatus[_multiSigAddress][reqId] = false;
+        bytes memory transferTxn = abi.encodeWithSignature("transferTokens(address,uint256)", address(this), _numTokens);
+        bytes memory multiSigSubmitTxn = abi.encodeWithSignature("submitPaymentRequest(address,string,uint256,uint256,bytes)", _erc20Address, serviceName, reqId, _numTokens, transferTxn);
         (bool success, ) = _multiSigAddress.call{value: 0}(
             multiSigSubmitTxn
         );
-        require(success, "TollSubscription: Txn failed.");
+        require(success, "Subscription: Txn failed.");
+        numRequests += 1;
+    }
+
+    function markRequestComplete(address _subscriberAddress, uint256 _reqId) public onlyOwner {
+        require(subscribers[_subscriberAddress].exists, "Subscription: Sender not a subscriber.");
+        requestStatus[_subscriberAddress][_reqId] = true;
+    }
+
+    function getRequestStatus(address _subscriberAddress, uint256 _reqId) public view returns (bool) {
+        return requestStatus[_subscriberAddress][_reqId];
     }
 
 }

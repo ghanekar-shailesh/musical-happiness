@@ -2,36 +2,38 @@
 pragma solidity ^0.8.10;
 
 contract CarMultiSigWallet {
-    event Deposit(address indexed sender, uint amount, uint balance);
-    event SubmitTransaction(
-        address indexed owner,
-        uint indexed txIndex,
+
+    event SubmitPaymentRequest(
+        address indexed from,
         address indexed to,
-        uint value,
+        uint indexed txIndex,
+        uint amount,
         bytes data
     );
-    event ConfirmTransaction(address indexed owner, uint indexed txIndex);
+    event ConfirmPaymentRequest(address indexed owner, uint indexed txIndex);
     event RevokeConfirmation(address indexed owner, uint indexed txIndex);
-    event ExecuteTransaction(address indexed owner, uint indexed txIndex);
+    event ExecutePaymentRequest(address indexed owner, uint indexed txIndex);
 
     address[] public primaryOwners;
     address[] public secondaryOwners;
+    PaymentRequest[] public requests;
+
     mapping(address => bool) public isPrimaryOwner;
     mapping(address => bool) public isSecondaryOwner;
+    mapping(uint => mapping(address => bool)) public isConfirmed;
+    mapping(address => bool) public subscriptions;
     uint public numConfirmationsRequired;
 
-    struct Transaction {
+    struct PaymentRequest {
         address to;
-        uint value;
+        string fromName;
+        address fromAddress;
+        uint reqId;
+        uint amount;
         bytes data;
         bool executed;
         uint numConfirmations;
     }
-
-    // mapping from tx index => owner => bool
-    mapping(uint => mapping(address => bool)) public isConfirmed;
-
-    Transaction[] public transactions;
 
     modifier onlyOwner() {
         require(isPrimaryOwner[msg.sender] || isSecondaryOwner[msg.sender], "CarMultiSigWallet: Not an owner.");
@@ -39,22 +41,27 @@ contract CarMultiSigWallet {
     }
 
     modifier onlyPrimaryOwner() {
-        require(isPrimaryOwner[msg.sender], "CarMultiSigWallet: Not an owner.");
+        require(isPrimaryOwner[msg.sender], "CarMultiSigWallet: Not a primary owner.");
         _;
     }
 
     modifier txExists(uint _txIndex) {
-        require(_txIndex < transactions.length, "tx does not exist");
+        require(_txIndex < requests.length, "CarMultiSigWallet: Txn does not exist.");
         _;
     }
 
     modifier notExecuted(uint _txIndex) {
-        require(!transactions[_txIndex].executed, "tx already executed");
+        require(!requests[_txIndex].executed, "CarMultiSigWallet: Txn already executed.");
         _;
     }
 
     modifier notConfirmed(uint _txIndex) {
-        require(!isConfirmed[_txIndex][msg.sender], "tx already confirmed");
+        require(!isConfirmed[_txIndex][msg.sender], "CarMultiSigWallet: Txn already confirmed.");
+        _;
+    }
+
+    modifier isSubscription() {
+        require(subscriptions[msg.sender], "CarMultiSigWallet: Sender's service is not subscribed.");
         _;
     }
 
@@ -70,8 +77,8 @@ contract CarMultiSigWallet {
         for (uint i = 0; i < _primaryOwners.length; i++) {
             address owner = _primaryOwners[i];
 
-            require(owner != address(0), "CarMultiSigWallet: Invalid owner");
-            require(!isPrimaryOwner[owner], "CarMultiSigWallet: Owner not unique");
+            require(owner != address(0), "CarMultiSigWallet: Invalid owner.");
+            require(!isPrimaryOwner[owner], "CarMultiSigWallet: Owner not unique.");
 
             isPrimaryOwner[owner] = true;
             primaryOwners.push(owner);
@@ -80,8 +87,8 @@ contract CarMultiSigWallet {
         for (uint i = 0; i < _secondaryOwners.length; i++) {
             address owner = _secondaryOwners[i];
 
-            require(owner != address(0), "CarMultiSigWallet: Invalid owner");
-            require(!isSecondaryOwner[owner], "CarMultiSigWallet: Owner not unique");
+            require(owner != address(0), "CarMultiSigWallet: Invalid owner.");
+            require(!isSecondaryOwner[owner], "CarMultiSigWallet: Owner not unique.");
 
             isSecondaryOwner[owner] = true;
             secondaryOwners.push(owner);
@@ -90,78 +97,87 @@ contract CarMultiSigWallet {
         numConfirmationsRequired = _numConfirmationsRequired;
     }
 
-    receive() external payable {
-        emit Deposit(msg.sender, msg.value, address(this).balance);
+    function subscribe(address _serviceAddress, uint _maxAmount) public onlyPrimaryOwner {
+        bytes memory subscribeTxn = abi.encodeWithSignature("subscribe(uint256)", _maxAmount);
+        (bool success, ) = _serviceAddress.call{value: 0}(
+            subscribeTxn
+        );
+        require(success, "CarMultiSigWallet: Subscription failed.");
+        subscriptions[_serviceAddress] = true;
     }
 
-    function submitTransaction(
-        address _to, // ERC20 address
-        uint _value, // 0
-        bytes memory _data // transferFrom('multiSigAdd', 'subscriptionAdd', 'amt')
-    ) public {
-        uint txIndex = transactions.length;
-
-        transactions.push(
-            Transaction({
+    function submitPaymentRequest(
+        address _to,
+        string memory _from,
+        uint _reqId,
+        uint _amount,
+        bytes memory _data
+    ) public isSubscription {
+        uint txIndex = requests.length;
+        requests.push(
+            PaymentRequest({
                 to: _to,
-                value: _value,
+                fromName: _from,
+                fromAddress: msg.sender,
+                reqId: _reqId,
+                amount: _amount,
                 data: _data,
                 executed: false,
                 numConfirmations: 0
             })
         );
 
-        emit SubmitTransaction(msg.sender, txIndex, _to, _value, _data);
+        emit SubmitPaymentRequest(msg.sender, _to, txIndex, _amount, _data);
     }
 
-    function confirmTransaction(uint _txIndex)
+    function confirmPaymentRequest(uint _txIndex)
         public
         onlyOwner
         txExists(_txIndex)
         notExecuted(_txIndex)
         notConfirmed(_txIndex)
     {
-        Transaction storage transaction = transactions[_txIndex];
-        transaction.numConfirmations += 1;
+        PaymentRequest storage request = requests[_txIndex];
+        request.numConfirmations += 1;
         isConfirmed[_txIndex][msg.sender] = true;
 
-        emit ConfirmTransaction(msg.sender, _txIndex);
+        emit ConfirmPaymentRequest(msg.sender, _txIndex);
     }
 
-    function executeTransaction(uint _txIndex)
+    function executePaymentRequest(uint _txIndex)
         public
         onlyPrimaryOwner
         txExists(_txIndex)
         notExecuted(_txIndex)
     {
-        Transaction storage transaction = transactions[_txIndex];
+        PaymentRequest storage request = requests[_txIndex];
 
         require(
-            transaction.numConfirmations >= numConfirmationsRequired,
+            request.numConfirmations >= numConfirmationsRequired,
             "CarMultiSigWallet: Not enough confirmations."
         );
 
-        transaction.executed = true;
+        request.executed = true;
 
-        (bool success, ) = transaction.to.call{value: transaction.value}(
-            transaction.data
+        (bool paymentSuccess, ) = request.to.call{value: 0}(
+            request.data
         );
-        require(success, "CarMultiSigWallet: Transaction Failed.");
+        require(paymentSuccess, "CarMultiSigWallet: Payment request failed.");
 
-        emit ExecuteTransaction(msg.sender, _txIndex);
+        emit ExecutePaymentRequest(msg.sender, _txIndex);
     }
 
-    function revokeConfirmation(uint _txIndex)
+    function revokePaymentConfirmation(uint _txIndex)
         public
         onlyOwner
         txExists(_txIndex)
         notExecuted(_txIndex)
     {
-        Transaction storage transaction = transactions[_txIndex];
+        PaymentRequest storage request = requests[_txIndex];
 
-        require(isConfirmed[_txIndex][msg.sender], "tx not confirmed");
+        require(isConfirmed[_txIndex][msg.sender], "CarMultiSigWallet: Request not confirmed.");
 
-        transaction.numConfirmations -= 1;
+        request.numConfirmations -= 1;
         isConfirmed[_txIndex][msg.sender] = false;
 
         emit RevokeConfirmation(msg.sender, _txIndex);
@@ -176,32 +192,32 @@ contract CarMultiSigWallet {
     }
 
     function getTransactionCount() public view returns (uint) {
-        return transactions.length;
+        return requests.length;
     }
 
-    function getTransaction(uint _txIndex)
+    function getPaymentRequest(uint _txIndex)
         public
         view
         returns (
             address to,
+            string memory fromName,
             uint value,
-            bytes memory data,
             bool executed,
             uint numConfirmations
         )
     {
-        Transaction storage transaction = transactions[_txIndex];
+        PaymentRequest storage request = requests[_txIndex];
 
         return (
-            transaction.to,
-            transaction.value,
-            transaction.data,
-            transaction.executed,
-            transaction.numConfirmations
+            request.to,
+            request.fromName,
+            request.amount,
+            request.executed,
+            request.numConfirmations
         );
     }
 
-    function getTransactions() public view returns (Transaction[] memory) {
-        return transactions;
+    function getPaymentRequests() public view returns (PaymentRequest[] memory) {
+        return requests;
     }
 }
