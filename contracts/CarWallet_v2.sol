@@ -24,17 +24,16 @@ contract CarWallet {
     mapping(address => bool) public isSecondaryOwner;
     mapping(uint => mapping(address => bool)) public isConfirmed;
     mapping(address => bool) public subscriptions;
-    uint public numConfirmationsRequired;
 
     struct PaymentRequest {
         address to;
-        string fromName;
         address fromAddress;
+        address carUser;
+        string fromName;
         uint reqId;
         uint amount;
         bytes data;
         bool executed;
-        uint numConfirmations;
     }
 
     modifier onlyOwner() {
@@ -67,14 +66,9 @@ contract CarWallet {
         _;
     }
 
-    constructor(address[] memory _primaryOwners, address[] memory _secondaryOwners, uint _numConfirmationsRequired) {
+    constructor(address[] memory _primaryOwners, address[] memory _secondaryOwners) {
         require(_primaryOwners.length > 0, "CarMultiSigWallet: Primary owners required");
         require(_secondaryOwners.length > 0, "CarMultiSigWallet: Secondary owners required");
-        require(
-            _numConfirmationsRequired > 0 &&
-                _numConfirmationsRequired <= _primaryOwners.length + _secondaryOwners.length,
-            "CarMultiSigWallet: Invalid number of required confirmations"
-        );
 
         for (uint i = 0; i < _primaryOwners.length; i++) {
             address owner = _primaryOwners[i];
@@ -95,8 +89,6 @@ contract CarWallet {
             isSecondaryOwner[owner] = true;
             secondaryOwners.push(owner);
         }
-
-        numConfirmationsRequired = _numConfirmationsRequired;
     }
 
     function subscribe(address _serviceAddress, uint _maxAmount) public onlyPrimaryOwner {
@@ -109,8 +101,7 @@ contract CarWallet {
     }
 
     function setCurrentCarUser() public onlyOwner {
-        require(!carInUse , "Car is already in use by " + currentCarUser + ".");
-        
+        require(!carInUse , "CarMultiSigWallet: Car already in use.");
         currentCarUser = msg.sender;
         carInUse = true;
     }
@@ -119,7 +110,7 @@ contract CarWallet {
         require(carInUse , "The car is not in use at present.");
         require(msg.sender == currentCarUser , "You are not using the car at present.");
 
-        currentCarUser = address(0x0);
+        currentCarUser = address(0);
         carInUse = false;
     }
 
@@ -135,12 +126,12 @@ contract CarWallet {
             PaymentRequest({
                 to: _to,
                 fromName: _from,
+                carUser: currentCarUser,
                 fromAddress: msg.sender,
                 reqId: _reqId,
                 amount: _amount,
                 data: _data,
-                executed: false,
-                numConfirmations: 0
+                executed: false
             })
         );
 
@@ -154,8 +145,6 @@ contract CarWallet {
         notExecuted(_txIndex)
         notConfirmed(_txIndex)
     {
-        PaymentRequest storage request = requests[_txIndex];
-        request.numConfirmations += 1;
         isConfirmed[_txIndex][msg.sender] = true;
 
         emit ConfirmPaymentRequest(msg.sender, _txIndex);
@@ -171,11 +160,6 @@ contract CarWallet {
         notExecuted(_txIndex)
     {
         PaymentRequest storage request = requests[_txIndex];
-
-        require(
-            request.numConfirmations >= numConfirmationsRequired,
-            "CarMultiSigWallet: Not enough confirmations."
-        );
 
         request.executed = true;
 
@@ -193,11 +177,8 @@ contract CarWallet {
         txExists(_txIndex)
         notExecuted(_txIndex)
     {
-        PaymentRequest storage request = requests[_txIndex];
-
         require(isConfirmed[_txIndex][msg.sender], "CarMultiSigWallet: Request not confirmed.");
 
-        request.numConfirmations -= 1;
         isConfirmed[_txIndex][msg.sender] = false;
 
         emit RevokeConfirmation(msg.sender, _txIndex);
@@ -220,20 +201,20 @@ contract CarWallet {
         view
         returns (
             address to,
+            address carUser,
             string memory fromName,
             uint value,
-            bool executed,
-            uint numConfirmations
+            bool executed
         )
     {
         PaymentRequest storage request = requests[_txIndex];
 
         return (
             request.to,
+            request.carUser,
             request.fromName,
             request.amount,
-            request.executed,
-            request.numConfirmations
+            request.executed
         );
     }
 
@@ -241,7 +222,7 @@ contract CarWallet {
         return requests;
     }
 
-    function isRequestConfirmed(uint _txIndex) internal returns bool {
+    function isRequestConfirmed(uint _txIndex) internal view returns (bool) {
         if(primaryOwners[0] == currentCarUser) {
             if(isConfirmed[_txIndex][currentCarUser]){
                 return true;
