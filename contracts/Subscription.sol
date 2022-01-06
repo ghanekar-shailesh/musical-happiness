@@ -8,7 +8,7 @@ contract SubscriptionService {
     uint numRequests;
 
     mapping(address => Subscription) private subscribers;
-    mapping(address => mapping(uint256 => bool)) private requestStatus;
+    mapping(address => mapping(uint256 => PaymentRequest)) public requestStatus;
 
     struct Subscription {
         bool exists;
@@ -19,6 +19,7 @@ contract SubscriptionService {
 
     struct PaymentRequest {
         address to;
+        uint amount;
         bool complete;
     }
 
@@ -41,7 +42,7 @@ contract SubscriptionService {
         require(subscribers[_multiSigAddress].expires > block.timestamp, "Subscription: Subscription expired.");
         require(subscribers[_multiSigAddress].maxAmount >= _numTokens, "Subscription: Amount threshold breached.");
         uint reqId = numRequests;
-        requestStatus[_multiSigAddress][reqId] = false;
+        requestStatus[_multiSigAddress][reqId] = PaymentRequest({to: _multiSigAddress, amount: _numTokens, complete: false});
         bytes memory transferTxn = abi.encodeWithSignature("transferTokens(address,uint256)", address(this), _numTokens);
         bytes memory multiSigSubmitTxn = abi.encodeWithSignature("submitPaymentRequest(address,string,uint256,uint256,bytes)", _erc20Address, serviceName, reqId, _numTokens, transferTxn);
         (bool success, ) = _multiSigAddress.call{value: 0}(
@@ -53,11 +54,11 @@ contract SubscriptionService {
 
     function markRequestComplete(address _subscriberAddress, uint256 _reqId) public onlyOwner {
         require(subscribers[_subscriberAddress].exists, "Subscription: Sender not a subscriber.");
-        requestStatus[_subscriberAddress][_reqId] = true;
+        requestStatus[_subscriberAddress][_reqId].complete = true;
     }
 
     function getRequestStatus(address _subscriberAddress, uint256 _reqId) public view returns (bool) {
-        return requestStatus[_subscriberAddress][_reqId];
+        return requestStatus[_subscriberAddress][_reqId].complete;
     }
 
 }
