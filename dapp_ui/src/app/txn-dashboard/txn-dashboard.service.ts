@@ -13,8 +13,8 @@ export class TxnDashboardService {
   formatResponse(resArray: any) {
     let objArray = [];
     for (let i = 0; i < resArray.length; i++) {
-      const [to, from, amount, executed] = resArray[i];
-      const obj = { to, from, amount, executed, index: i };
+      const [carUser, from, amount, executed] = resArray[i];
+      const obj = { carUser, from, amount, executed, index: i };
       obj.amount = BigNumber.from(obj.amount.hex).toNumber();
       objArray.push(obj)
     }

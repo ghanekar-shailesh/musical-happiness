@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.10;
 
-contract CarWallet {
+contract CarWalletV2 {
 
     event SubmitPaymentRequest(
         address indexed from,

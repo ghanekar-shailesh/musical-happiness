@@ -2,13 +2,15 @@
 // `ng build` replaces `environment.ts` with `environment.prod.ts`.
 // The list of file replacements can be found in `angular.json`.
 
+const protocol = window.location.protocol;
+
 export const environment = {
   production: false,
-  rpc_provider_url: 'http://localhost:8545',
+  rpc_provider_url: protocol + "//" + window.location.hostname + ":8545/",
   contractAddress: {
-    carWallet: '0xC89Ce4735882C9F0f0FE26686c53074E09B0D550',
-    driveToken: '0xCfEB869F69431e42cdB54A4F4f105C19C080A601',
-    subscriptionServive: '0x254dffcd3277C0b1660F6d42EFbB754edaBAbC2B'
+    carWallet: '0x59d3631c86BbE35EF041872d502F218A39FBa150', // Replace with actual
+    driveToken: '0x9561C133DD8580860B6b7E504bC5Aa500f0f06a7', // Replace with actual
+    subscriptionServive: '0xe982E462b094850F12AF94d21D470e21bE9D0E9C' // Replace with actual
   },
   decimals: 10 ** 18,
   overrides: {

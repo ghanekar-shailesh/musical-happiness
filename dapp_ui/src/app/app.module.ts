@@ -10,6 +10,7 @@ import { PaymentRequestComponent } from './payment-request/payment-request.compo
 import { TxnDashboardComponent } from './txn-dashboard/txn-dashboard.component';
 import { TxnHistoryComponent } from './txn-history/txn-history.component';
 import { BalanceComponent } from './balance/balance.component';
+import { CarUserComponent } from './car-user/car-user.component';
 
 @NgModule({
   declarations: [
@@ -20,7 +21,8 @@ import { BalanceComponent } from './balance/balance.component';
     PaymentRequestComponent,
     TxnDashboardComponent,
     TxnHistoryComponent,
-    BalanceComponent
+    BalanceComponent,
+    CarUserComponent
   ],
   imports: [
     BrowserModule,
