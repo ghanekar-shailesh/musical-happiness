@@ -9,7 +9,7 @@ module.exports = async function (deployer, network, accounts) {
 
     driveToken = await deployer.deploy(DriveToken, { from: accounts[0] });
     subService = await deployer.deploy(SubscriptionService, 'NTSB', { from: accounts[0] });
-    carWallet = await deployer.deploy(CarWallet, primaryOwners, secondaryOwners, 2, { from: accounts[0] });
+    carWallet = await deployer.deploy(CarWallet, primaryOwners, secondaryOwners, { from: accounts[0] });
 
     const msg = `-----------------------------------
     date: ${new Date().toString()}
