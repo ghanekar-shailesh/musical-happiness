@@ -2,7 +2,7 @@
 
 Smart contracts for ZF-Hackathon project.
 
-# Steps for testing txn flow
+# Initial Setup
 
 - **Step 0**: Start ganache in background > `nohup ganache-cli -e 100 -a 10 -b 5 -h 0.0.0.0 -d &` and note the PID. To stop the process > `kill -9 <PID>`
 
@@ -10,18 +10,28 @@ Smart contracts for ZF-Hackathon project.
 
 - **Step 2**: Replace contract addresses in angular project (in environment.ts)
 
-- **Step 2**: Start truffle console > `truffle console`
+- **Step 3**: Start truffle console > `truffle console`
 
-- **Step 3**: Fetch all accounts > `let acc = await web3.eth.getAccounts()`
+- **Step 4**: Fetch all accounts > `let acc = await web3.eth.getAccounts()`
 
-- **Step 4**: Get instances of deployed contracts > `let zt = await ZFToken.deployed() / let cw = await CarWallet.deployed()`
+- **Step 5**: Get instances of deployed contracts > `let zt = await ZFToken.deployed() / let cw = await CarWallet.deployed()`
 
-- **Step 5**: Call ZFToken.assignTokens(carWalletAddress, 100) to assign 200 tokens to multiSig contract address > `await zt.assignTokens("<CarWallet_address>", 200)`
+- **Step 6**: Call ZFToken.assignTokens(carWalletAddress, 100) to assign 200 tokens to multiSig contract address > `await zt.assignTokens("<CarWallet_address>", 200)`
 
-- **Step 6**: Call CarWallet.subscribe(serviceContractAddress, 50) from primary owner's address to subscribe to the service and set max withdrawal limit to 50 > `await cw.subscribe("<SubscriptionService_address>", 50, {from:acc[1]})`
+- **Step 7**: Call CarWallet.subscribe(serviceContractAddress, 50) from primary owner's address to subscribe to the service and set max withdrawal limit to 50 > `await cw.subscribe("<SubscriptionService_address>", 50, {from:acc[1]})`
 
-- **Step 7**: Call CarWallet.setCurrentCarUser() from primary owner's account > `await cw.setCurrentCarUser({from:acc[1]})`
+- **Step 8**: Call CarWallet.setCurrentCarUser() from primary owner's account > `await cw.setCurrentCarUser({from:acc[1]})`
 
+---
+
+# Login required for every sceen
+
+- Subscribe > Car primary owner
+- Car User > Car primary owner
+- Dashboard (approval) > Car primary owner
+- History > anyone
+- Request payment > Subscription service owner
+- Balance > anyone
 ---
 
 # Required keys and addresses
