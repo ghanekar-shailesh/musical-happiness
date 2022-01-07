@@ -15,7 +15,7 @@ module.exports = async function (deployer, network, accounts) {
     date: ${new Date().toString()}
     network: ${network}
     CarWallet address: ${CarWallet.address}
-    DriveToken address: ${ZFToken.address}
+    ZFToken address: ${ZFToken.address}
     SubscriptionService address: ${SubscriptionService.address}
     -----------------------------------`
 
