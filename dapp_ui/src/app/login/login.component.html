@@ -1,0 +1,15 @@
+<div class="card text-center" style="width: 50%;margin: 5rem auto;">
+    <div class="card-header">
+        <h5>Import Your Wallet</h5>
+    </div>
+    <div class="card-body">
+        <div class="form-floating mb-3">
+            <input type="password" #pvtKey class="form-control" id="floatingInput"
+                placeholder="Paste your private key here">
+            <label for="floatingInput">Private Key</label>
+        </div>
+    </div>
+    <div class="card-footer">
+        <a class="btn btn-primary" (click)="importWallet(pvtKey.value)">Import</a>
+    </div>
+</div>

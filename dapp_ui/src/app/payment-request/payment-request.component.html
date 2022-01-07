@@ -1,0 +1,26 @@
+<div class="card text-center" style="width: 50%;margin: 5rem auto;">
+    <div class="card-header">
+        <h5>Request Payment</h5>
+    </div>
+    <div class="card-body">
+        <div class="form-floating mb-3">
+            <input type="text" #carAddress class="form-control" id="floatingInput"
+                placeholder="Paste service address here">
+            <label for="floatingInput">Car Wallet Address</label>
+        </div>
+        <div class="form-floating mb-3">
+            <input type="text" #tokenAddress class="form-control" id="floatingInput"
+                placeholder="Paste max withdrawal amount here">
+            <label for="floatingInput">Payment Token Address</label>
+        </div>
+        <div class="form-floating mb-3">
+            <input type="text" #amount class="form-control" id="floatingInput"
+                placeholder="Paste max withdrawal amount here">
+            <label for="floatingInput">Amount</label>
+        </div>
+    </div>
+    <div class="card-footer">
+        <a class="btn btn-primary" (click)="requestPayment(amount.value, carAddress.value, tokenAddress.value)">Send
+            Request</a>
+    </div>
+</div>

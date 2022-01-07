@@ -1,0 +1,20 @@
+<div class="card text-center" style="width: 50%;margin: 5rem auto;">
+    <div class="card-header">
+        <h5>Subscribe to a service</h5>
+    </div>
+    <div class="card-body">
+        <div class="form-floating mb-3">
+            <input type="text" #serviceAddress class="form-control" id="floatingInput"
+                placeholder="Paste service address here">
+            <label for="floatingInput">Service Address</label>
+        </div>
+        <div class="form-floating mb-3">
+            <input type="number" #maxAmount class="form-control" id="floatingInput"
+                placeholder="Paste max withdrawal amount here">
+            <label for="floatingInput">Max Withdrawal</label>
+        </div>
+    </div>
+    <div class="card-footer">
+        <a class="btn btn-primary" (click)="subscribe(serviceAddress.value, maxAmount.value)">Subscribe</a>
+    </div>
+</div>

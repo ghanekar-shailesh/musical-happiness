@@ -17,6 +17,7 @@ contract CarWallet {
     address[] public primaryOwners;
     address[] public secondaryOwners;
     PaymentRequest[] public requests;
+    SimplifiedRequest[] public simpleRequests;
     address public currentCarUser;
     bool carInUse;
 
@@ -33,6 +34,13 @@ contract CarWallet {
         uint reqId;
         uint amount;
         bytes data;
+        bool executed;
+    }
+
+    struct SimplifiedRequest {
+        address carUser;
+        string fromName;
+        uint amount;
         bool executed;
     }
 
@@ -135,6 +143,15 @@ contract CarWallet {
             })
         );
 
+        simpleRequests.push(
+            SimplifiedRequest({
+                fromName: _from,
+                carUser: currentCarUser,
+                amount: _amount,
+                executed: false
+            })
+        );
+
         emit SubmitPaymentRequest(msg.sender, _to, txIndex, _amount, _data);
     }
 
@@ -160,8 +177,10 @@ contract CarWallet {
         notExecuted(_txIndex)
     {
         PaymentRequest storage request = requests[_txIndex];
+        SimplifiedRequest storage simpleRequest = simpleRequests[_txIndex];
 
         request.executed = true;
+        simpleRequest.executed = true;
 
         (bool paymentSuccess, ) = request.to.call{value: 0}(
             request.data
@@ -218,8 +237,8 @@ contract CarWallet {
         );
     }
 
-    function getPaymentRequests() public view returns (PaymentRequest[] memory) {
-        return requests;
+    function getPaymentRequests() public view returns (SimplifiedRequest[] memory) {
+        return simpleRequests;
     }
 
     function isRequestConfirmed(uint _txIndex) internal view returns (bool) {

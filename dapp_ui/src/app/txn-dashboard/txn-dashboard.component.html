@@ -1,0 +1,35 @@
+<div style="margin: 5rem 5rem;">
+    <h2>Pending Requests</h2>
+    <div *ngIf="!requests?.length" class="alert alert-primary" role="alert">
+        There are no pending requests!
+    </div>
+    <table *ngIf="requests?.length" class="table table-bordered">
+        <thead>
+            <tr>
+                <th scope="col">From</th>
+                <th scope="col">Token Address</th>
+                <th scope="col">Amount</th>
+                <th scope="col">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr *ngFor="let request of requests;">
+                <td>
+                    {{request.from}}
+                </td>
+                <td>
+                    {{request.to}}
+                </td>
+                <td>
+                    {{request.amount}}
+                </td>
+                <td>
+                    <button type="button" class="btn btn-success"
+                        (click)="approveRequest(request.index)">Approve</button>
+                    &nbsp;&nbsp;
+                    <button type="button" class="btn btn-danger" (click)="denyRequest(request.index)">Reject</button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
